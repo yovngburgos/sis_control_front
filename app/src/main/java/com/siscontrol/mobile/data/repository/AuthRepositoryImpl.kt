@@ -19,14 +19,14 @@ class AuthRepositoryImpl(
         return try {
             val request = LoginRequest(username, password)
             val response = apiService.login(request)
-            
-            if (response.isSuccessful && response.body() != null) {
-                val body = response.body()!!
-                // Mapeamos el DTO de red al modelo de Dominio
-                if (body.success && !body.username.isNullOrBlank() && !body.role.isNullOrBlank()) {
+            val body = response.body()
+
+            if (response.isSuccessful && body != null) {
+                if (body.success && body.id != null && !body.username.isNullOrBlank() && !body.role.isNullOrBlank()) {
                     Result.success(
                         LoginResult(
                             message = body.message,
+                            id = body.id,
                             username = body.username,
                             role = body.role
                         )

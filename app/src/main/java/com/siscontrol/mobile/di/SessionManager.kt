@@ -36,11 +36,11 @@ class SessionManager(private val context: Context) {
         private val KEY_CHECKPOINT_MAP = stringPreferencesKey("checkpoint_map")
     }
 
-    suspend fun saveSession(username: String, role: String) {
+    suspend fun saveSession(userId: Long, username: String, role: String) {
         context.dataStore.edit { preferences ->
+            preferences[KEY_USER_ID] = userId
             preferences[KEY_USERNAME] = username
             preferences[KEY_ROLE] = normalizeRole(role)
-            preferences.remove(KEY_USER_ID)
             preferences.remove(KEY_INSTALLATION_ID)
             preferences.remove(KEY_SHIFT_ID)
             preferences.remove(KEY_EXECUTION_ID)

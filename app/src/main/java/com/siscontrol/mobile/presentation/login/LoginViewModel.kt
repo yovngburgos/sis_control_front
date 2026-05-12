@@ -12,6 +12,7 @@ sealed class LoginUiState {
     object Idle : LoginUiState()
     object Loading : LoginUiState()
     data class Success(
+        val userId: Long,
         val username: String,
         val role: String
     ) : LoginUiState()
@@ -31,6 +32,7 @@ class LoginViewModel(
             loginUseCase(username, password)
                 .onSuccess { result ->
                     _uiState.value = LoginUiState.Success(
+                        userId = result.id,
                         username = result.username,
                         role = result.role
                     )

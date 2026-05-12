@@ -185,10 +185,10 @@ fun AppNavigation() {
                 onForgotPassword = {
                     navController.navigate(Destinos.FORGOT_PASSWORD)
                 },
-                onLoginSuccess = { username, role ->
+                onLoginSuccess = { userId, username, role ->
                     // Guardar sesión en DataStore de forma persistente
                     scope.launch {
-                        sessionManager.saveSession(username, role)
+                        sessionManager.saveSession(userId, username, role)
                         // Navegar al Home específico según el rol
                         val nextRoute = when (role) {
                             "ADMIN"      -> Destinos.adminHomeRoute(username, role)

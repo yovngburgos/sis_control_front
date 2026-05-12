@@ -7,6 +7,7 @@ package com.siscontrol.mobile.data.remote.dto
 data class LoginResponse(
     val message: String,
     val success: Boolean,
+    val id: Long?,
     val username: String?,
     val role: String?
 )

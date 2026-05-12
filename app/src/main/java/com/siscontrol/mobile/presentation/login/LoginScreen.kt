@@ -38,7 +38,7 @@ import com.siscontrol.mobile.presentation.theme.*
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel,
-    onLoginSuccess: (username: String, role: String) -> Unit,
+    onLoginSuccess: (userId: Long, username: String, role: String) -> Unit,
     onForgotPassword: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -46,7 +46,7 @@ fun LoginScreen(
     LaunchedEffect(state) {
         if (state is LoginUiState.Success) {
             val success = state as LoginUiState.Success
-            onLoginSuccess(success.username, success.role)
+            onLoginSuccess(success.userId, success.username, success.role)
         }
     }
 
