@@ -448,9 +448,9 @@ private fun InstallationMultiSelector(
                                 text = inst.name,
                                 style = MaterialTheme.typography.bodyMedium
                             )
-                            if (inst.address.isNotBlank()) {
+                            if (!inst.address.isNullOrBlank()) {
                                 Text(
-                                    text = inst.address,
+                                    text = inst.address ?: "",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
