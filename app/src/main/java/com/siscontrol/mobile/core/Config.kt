@@ -1,14 +1,15 @@
 package com.siscontrol.mobile.core
 
+import com.siscontrol.mobile.BuildConfig
+
 object Config {
-    private const val API_PATH = "api/"  // <-- AGREGADO
+    /**
+     * URL del backend real. Configurable con:
+     * ./gradlew assembleDebug -PAPI_BASE_URL=http://<ip-o-dominio>:8080/
+     *
+     * En móvil no se usa localhost; el valor por defecto apunta al host del emulador Android.
+     */
+    val BASE_URL: String = BuildConfig.API_BASE_URL.ensureTrailingSlash()
 
-    const val BASE_URL_EMULATOR = "http://10.0.2.2:8080/"
-    const val BASE_URL_DEVICE   = "http://192.168.1.103:8080/" // IP local real
-    const val USE_DEVICE = false  // CAMBIAR a TRUE usando un TELEFONO
-    val BASE_URL: String = if (USE_DEVICE) BASE_URL_DEVICE else BASE_URL_EMULATOR
-
-    const val AUTH_PREFERENCE = "AUTH_PREF"
-    const val AUTH_KEY = "AUTH_KEY" // token
-    const val USER_ID_KEY = "USER_ID"
+    private fun String.ensureTrailingSlash(): String = if (endsWith("/")) this else "$this/"
 }

@@ -1,13 +1,12 @@
 package com.siscontrol.mobile.data.remote.dto
 
 /**
- * Data class que mapea la respuesta de login del servidor, 
- * extrayendo tanto el JWT como la información básica del usuario.
+ * Respuesta real de POST /api/auth/login.
+ * El backend no emite JWT ni devuelve userId.
  */
 data class LoginResponse(
-    val token: String,
-    val id: Long,
-    val username: String,
-    val fullName: String,
-    val role: String
+    val message: String,
+    val success: Boolean,
+    val username: String?,
+    val role: String?
 )

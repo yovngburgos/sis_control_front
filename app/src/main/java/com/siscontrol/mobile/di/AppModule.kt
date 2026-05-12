@@ -1,15 +1,25 @@
 package com.siscontrol.mobile.di
 
+import com.siscontrol.mobile.core.Config
 import com.siscontrol.mobile.data.remote.AuthApiService
+import com.siscontrol.mobile.data.remote.GuardFlowApiService
 import com.siscontrol.mobile.data.remote.InstallationApiService
 import com.siscontrol.mobile.data.remote.PersonnelApiService
 import com.siscontrol.mobile.data.repository.AuthRepositoryImpl
+import com.siscontrol.mobile.data.repository.GuardFlowRepositoryImpl
 import com.siscontrol.mobile.data.repository.InstallationRepositoryImpl
 import com.siscontrol.mobile.data.repository.PersonnelRepositoryImpl
 import com.siscontrol.mobile.domain.usecase.CreatePersonnelUseCase
+import com.siscontrol.mobile.domain.usecase.GetCheckpointsUseCase
 import com.siscontrol.mobile.domain.usecase.GetInstallationsUseCase
 import com.siscontrol.mobile.domain.usecase.GetPersonnelUseCase
+import com.siscontrol.mobile.domain.usecase.FinishRoundUseCase
+import com.siscontrol.mobile.domain.usecase.FinishShiftUseCase
 import com.siscontrol.mobile.domain.usecase.LoginUseCase
+import com.siscontrol.mobile.domain.usecase.RegisterScanUseCase
+import com.siscontrol.mobile.domain.usecase.StartRoundUseCase
+import com.siscontrol.mobile.domain.usecase.StartShiftUseCase
+import com.siscontrol.mobile.presentation.guard.GuardFlowViewModel
 import com.siscontrol.mobile.presentation.login.LoginViewModel
 import com.siscontrol.mobile.presentation.management.CreatePersonnelViewModel
 import okhttp3.Interceptor
@@ -29,14 +39,13 @@ import kotlinx.coroutines.runBlocking
  * Actúa como el único punto de ensamblaje de la aplicación:
  *   Retrofit → ApiService → RepositoryImpl → UseCase → ViewModel
  *
- * La URL base apunta al backend Spring Boot corriendo en el emulador
- * de Android (10.0.2.2 es el alias que el emulador usa para el localhost del PC).
- * Si usas un dispositivo físico, reemplaza esta IP por la IP local de tu PC.
+ * La URL base es configurable por Gradle con API_BASE_URL y debe apuntar
+ * a una IP/dominio accesible desde el emulador o dispositivo físico.
  */
 object AppModule {
 
-    /** URL del backend. Ajusta el puerto si tu Spring Boot no usa el 8080. */
-    private const val BASE_URL = "http://10.0.2.2:8080/"
+    /** URL del backend, configurable vía -PAPI_BASE_URL. */
+    private val BASE_URL: String = Config.BASE_URL
 
     // Gestor de sesión persistente (DataStore)
     private lateinit var sessionManager: SessionManager
@@ -119,6 +128,10 @@ object AppModule {
         retrofit.create(InstallationApiService::class.java)
     }
 
+    val guardFlowApiService: GuardFlowApiService by lazy {
+        retrofit.create(GuardFlowApiService::class.java)
+    }
+
     // -------------------------------------------------------------------------
     // Repositories (implementaciones concretas de las interfaces del Dominio)
     // -------------------------------------------------------------------------
@@ -135,6 +148,10 @@ object AppModule {
         InstallationRepositoryImpl(installationApiService)
     }
 
+    private val guardFlowRepository by lazy {
+        GuardFlowRepositoryImpl(guardFlowApiService)
+    }
+
     // -------------------------------------------------------------------------
     // Use Cases
     // -------------------------------------------------------------------------
@@ -143,6 +160,12 @@ object AppModule {
     val getPersonnelUseCase          by lazy { GetPersonnelUseCase(personnelRepository) }
     val createPersonnelUseCase       by lazy { CreatePersonnelUseCase(personnelRepository) }
     val getInstallationsUseCase      by lazy { GetInstallationsUseCase(installationRepository) }
+    private val getCheckpointsUseCase    by lazy { GetCheckpointsUseCase(installationRepository) }
+    private val startShiftUseCase     by lazy { StartShiftUseCase(guardFlowRepository) }
+    private val finishShiftUseCase    by lazy { FinishShiftUseCase(guardFlowRepository) }
+    private val startRoundUseCase     by lazy { StartRoundUseCase(guardFlowRepository) }
+    private val finishRoundUseCase    by lazy { FinishRoundUseCase(guardFlowRepository) }
+    private val registerScanUseCase   by lazy { RegisterScanUseCase(guardFlowRepository) }
 
     // -------------------------------------------------------------------------
     // ViewModel Factories
@@ -159,4 +182,16 @@ object AppModule {
      */
     fun provideCreatePersonnelViewModel(): CreatePersonnelViewModel =
         CreatePersonnelViewModel(createPersonnelUseCase, getInstallationsUseCase)
+
+    fun provideGuardFlowViewModel(): GuardFlowViewModel =
+        GuardFlowViewModel(
+            sessionManager = sessionManager,
+            startShiftUseCase = startShiftUseCase,
+            finishShiftUseCase = finishShiftUseCase,
+            startRoundUseCase = startRoundUseCase,
+            finishRoundUseCase = finishRoundUseCase,
+            registerScanUseCase = registerScanUseCase,
+            getInstallationsUseCase = getInstallationsUseCase,
+            getCheckpointsUseCase = getCheckpointsUseCase
+        )
 }

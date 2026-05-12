@@ -24,7 +24,7 @@ class InstallationViewModel(
     fun createInstallation(name: String, address: String, lat: Double, lng: Double) {
         viewModelScope.launch {
             _uiState.value = InstallationUiState.Loading
-            val request = InstallationRequestDto(name, address, lat, lng)
+            val request = InstallationRequestDto(name = name, address = address, location = "$lat,$lng")
             createInstallationUseCase(request).fold(
                 onSuccess = { installation ->
                     _uiState.value = InstallationUiState.Success(installation)

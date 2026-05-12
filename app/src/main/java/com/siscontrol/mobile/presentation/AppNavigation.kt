@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.navigation.navArgument
 import com.siscontrol.mobile.di.AppModule
+import com.siscontrol.mobile.presentation.guard.GuardFlowViewModel
 import com.siscontrol.mobile.presentation.login.ForgotPasswordScreen
 import com.siscontrol.mobile.presentation.login.LoginScreen
 import com.siscontrol.mobile.presentation.login.LoginViewModel
@@ -113,6 +114,12 @@ private class CreatePersonnelViewModelFactory : ViewModelProvider.Factory {
         AppModule.provideCreatePersonnelViewModel() as T
 }
 
+private class GuardFlowViewModelFactory : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T =
+        AppModule.provideGuardFlowViewModel() as T
+}
+
 // ---------------------------------------------------------------------------
 // NavGraph principal
 // ---------------------------------------------------------------------------
@@ -178,16 +185,16 @@ fun AppNavigation() {
                 onForgotPassword = {
                     navController.navigate(Destinos.FORGOT_PASSWORD)
                 },
-                onLoginSuccess = { token, role ->
+                onLoginSuccess = { username, role ->
                     // Guardar sesión en DataStore de forma persistente
                     scope.launch {
-                        sessionManager.saveSession(token, role)
+                        sessionManager.saveSession(username, role)
                         // Navegar al Home específico según el rol
                         val nextRoute = when (role) {
-                            "ADMIN"      -> Destinos.adminHomeRoute(token, role)
-                            "SUPERVISOR" -> Destinos.supervisorHomeRoute(token, role)
-                            "GUARDIA"    -> Destinos.guardHomeRoute(token, role)
-                            else         -> Destinos.mainRoute(token, role)
+                            "ADMIN"      -> Destinos.adminHomeRoute(username, role)
+                            "SUPERVISOR" -> Destinos.supervisorHomeRoute(username, role)
+                            "GUARD", "GUARDIA" -> Destinos.guardHomeRoute(username, role)
+                            else         -> Destinos.mainRoute(username, role)
                         }
                         navController.navigate(nextRoute) {
                             popUpTo(Destinos.LOGIN) { inclusive = true }
@@ -226,7 +233,7 @@ fun AppNavigation() {
                 val nextRoute = when (role) {
                     "ADMIN" -> Destinos.adminHomeRoute(token, role)
                     "SUPERVISOR" -> Destinos.supervisorHomeRoute(token, role)
-                    "GUARDIA" -> Destinos.guardHomeRoute(token, role)
+                    "GUARD", "GUARDIA" -> Destinos.guardHomeRoute(token, role)
                     else -> null
                 }
                 if (nextRoute != null) {
@@ -445,10 +452,12 @@ fun AppNavigation() {
         )) { backStack ->
             val token = java.net.URLDecoder.decode(backStack.arguments?.getString("token") ?: "", "UTF-8")
             val role  = java.net.URLDecoder.decode(backStack.arguments?.getString("role") ?: "", "UTF-8")
+            val guardFlowViewModel: GuardFlowViewModel = viewModel(factory = GuardFlowViewModelFactory())
             com.siscontrol.mobile.presentation.main.MainScaffold(navController, role, token) { padding ->
                 com.siscontrol.mobile.presentation.guard.GuardStartRoundScreen(
                     paddingValues = padding,
-                    onStartRound = { navController.navigate(Destinos.guardRondaRoute(token, role)) }
+                    viewModel = guardFlowViewModel,
+                    onRoundStarted = { navController.navigate(Destinos.guardRondaRoute(token, role)) }
                 )
             }
         }
@@ -459,9 +468,11 @@ fun AppNavigation() {
         )) { backStack ->
             val token = java.net.URLDecoder.decode(backStack.arguments?.getString("token") ?: "", "UTF-8")
             val role  = java.net.URLDecoder.decode(backStack.arguments?.getString("role") ?: "", "UTF-8")
+            val guardFlowViewModel: GuardFlowViewModel = viewModel(factory = GuardFlowViewModelFactory())
             com.siscontrol.mobile.presentation.main.MainScaffold(navController, role, token) { padding ->
                 com.siscontrol.mobile.presentation.guard.GuardiaRondaActivaScreen(
-                    onFinishRound = { navController.popBackStack(Destinos.guardHomeRoute(token, role), false) },
+                    viewModel = guardFlowViewModel,
+                    onFinishShift = { navController.popBackStack(Destinos.guardHomeRoute(token, role), false) },
                     onReportIncident = { navController.navigate(Destinos.guardIncidentRoute(token, role)) },
                     onPanic = { /* Dialog handled internally in GuardiaRondaActivaScreen */ },
                     onScanCheckpoint = { navController.navigate(Destinos.guardCheckpointRoute(token, role)) }
@@ -553,9 +564,11 @@ fun AppNavigation() {
         )) { backStack ->
             val token = java.net.URLDecoder.decode(backStack.arguments?.getString("token") ?: "", "UTF-8")
             val role  = java.net.URLDecoder.decode(backStack.arguments?.getString("role") ?: "", "UTF-8")
+            val guardFlowViewModel: GuardFlowViewModel = viewModel(factory = GuardFlowViewModelFactory())
             com.siscontrol.mobile.presentation.main.MainScaffold(navController, role, token) { _ ->
                 com.siscontrol.mobile.presentation.guard.GuardCheckpointScreen(
-                    onSimulateScan = { navController.navigate(Destinos.guardCheckpointConfirmRoute(token, role)) }
+                    viewModel = guardFlowViewModel,
+                    onScanSuccess = { navController.navigate(Destinos.guardCheckpointConfirmRoute(token, role)) }
                 )
             }
         }

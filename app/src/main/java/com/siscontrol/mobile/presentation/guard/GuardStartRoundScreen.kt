@@ -14,6 +14,12 @@ import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,8 +33,17 @@ import com.siscontrol.mobile.presentation.theme.*
 @Composable
 fun GuardStartRoundScreen(
     paddingValues: PaddingValues,
-    onStartRound: () -> Unit
+    viewModel: GuardFlowViewModel,
+    onRoundStarted: () -> Unit
 ) {
+    val state by viewModel.uiState.collectAsState()
+    val setupState by viewModel.setupState.collectAsState()
+    var expandedInstallation by remember { mutableStateOf(false) }
+
+    LaunchedEffect(state) {
+        val ready = state as? GuardFlowUiState.Ready
+        if (ready?.executionId != null) onRoundStarted()
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -64,17 +79,80 @@ fun GuardStartRoundScreen(
             }
 
             item {
-                Text("Instalaciones Disponibles", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary, modifier = Modifier.padding(top = 8.dp))
+                Text("Datos de inicio", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary, modifier = Modifier.padding(top = 8.dp))
             }
 
             item {
-                InstallationCard("Plaza Centro", "200m", "8 checkpoints", onStartRound)
+                OutlinedTextField(
+                    value = setupState.userId,
+                    onValueChange = viewModel::updateUserId,
+                    label = { Text("UserId del guardia") },
+                    supportingText = { Text("El login del backend no devuelve userId; ingrésalo para llamar a rondas.") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            item {
+                ExposedDropdownMenuBox(
+                    expanded = expandedInstallation,
+                    onExpandedChange = { expandedInstallation = !expandedInstallation }
+                ) {
+                    val selected = setupState.installations.find { it.id == setupState.selectedInstallationId }
+                    OutlinedTextField(
+                        readOnly = true,
+                        value = selected?.name ?: "Selecciona instalación",
+                        onValueChange = {},
+                        label = { Text("Instalación") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedInstallation) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expandedInstallation,
+                        onDismissRequest = { expandedInstallation = false }
+                    ) {
+                        setupState.installations.forEach { installation ->
+                            DropdownMenuItem(
+                                text = { Text(installation.name) },
+                                onClick = {
+                                    viewModel.selectInstallation(installation.id)
+                                    expandedInstallation = false
+                                }
+                            )
+                        }
+                    }
+                }
+                if (setupState.loadingInstallations) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                }
+                setupState.message?.let { message ->
+                    Text(message, color = DangerColor, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 8.dp))
+                }
+            }
+
+            item {
+                InstallationCard(
+                    name = setupState.installations.find { it.id == setupState.selectedInstallationId }?.name ?: "Instalación seleccionada",
+                    distance = "ID: ${setupState.selectedInstallationId ?: "--"}",
+                    checkpoints = "Carga checkpoints NFC antes de escanear",
+                    onStartRound = { viewModel.startShiftAndRound() }
+                )
             }
             item {
-                InstallationCard("Bodega Norte", "1.2km", "6 checkpoints", onStartRound)
-            }
-            item {
-                InstallationCard("Edificio Sur", "3.5km", "10 checkpoints", onStartRound)
+                when (state) {
+                    is GuardFlowUiState.Loading -> LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    is GuardFlowUiState.Error -> Text(
+                        text = (state as GuardFlowUiState.Error).message,
+                        color = DangerColor,
+                        fontWeight = FontWeight.Medium
+                    )
+                    is GuardFlowUiState.Ready -> Text(
+                        text = (state as GuardFlowUiState.Ready).message.orEmpty(),
+                        color = SuccessColor,
+                        fontWeight = FontWeight.Medium
+                    )
+                    else -> Unit
+                }
             }
 
             item {
@@ -97,6 +175,8 @@ fun GuardStartRoundScreen(
                             VerificationItem("GPS activado")
                             VerificationItem("NFC habilitado")
                             VerificationItem("Conexión a internet estable")
+                            VerificationItem("UserId del guardia confirmado")
+                            VerificationItem("Instalación seleccionada y checkpoints cargados")
                             VerificationItem("Batería suficiente (>30%)")
                         }
                     }
@@ -145,7 +225,7 @@ fun InstallationCard(name: String, distance: String, checkpoints: String, onStar
                 colors = ButtonDefaults.buttonColors(containerColor = SuccessColor),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("Iniciar Ronda", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("Iniciar Jornada y Ronda", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

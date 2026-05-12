@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.siscontrol.mobile.data.remote.dto.CheckpointDto
 import com.siscontrol.mobile.data.remote.dto.CheckpointRequestDto
+import com.siscontrol.mobile.data.remote.dto.InstallationRefDto
 import com.siscontrol.mobile.data.remote.dto.InstallationDto
 import com.siscontrol.mobile.domain.usecase.CreateCheckpointUseCase
 import com.siscontrol.mobile.domain.usecase.GetInstallationsUseCase
@@ -42,7 +43,7 @@ class CheckpointViewModel(
     fun createCheckpoint(installationId: Long, name: String, type: String, tagId: String, lat: Double, lng: Double) {
         viewModelScope.launch {
             _uiState.value = CheckpointUiState.Loading
-            val request = CheckpointRequestDto(name, type, tagId, lat, lng)
+            val request = CheckpointRequestDto(name = name, locationDescription = "$lat,$lng", nfcTagCode = tagId, installation = InstallationRefDto(installationId))
             createCheckpointUseCase(installationId, request).fold(
                 onSuccess = { checkpoint ->
                     _uiState.value = CheckpointUiState.Success(checkpoint)

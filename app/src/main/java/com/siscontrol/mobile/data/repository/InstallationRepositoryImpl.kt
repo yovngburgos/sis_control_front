@@ -23,7 +23,7 @@ class InstallationRepositoryImpl(
     override suspend fun createInstallation(request: InstallationRequestDto): Result<InstallationDto> {
         return try {
             val response = apiService.createInstallation(request)
-            Result.success(response)
+            Result.success(response.instalacion)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -40,8 +40,8 @@ class InstallationRepositoryImpl(
 
     override suspend fun createCheckpoint(installationId: Long, request: CheckpointRequestDto): Result<CheckpointDto> {
         return try {
-            val response = apiService.createCheckpoint(installationId, request)
-            Result.success(response)
+            val response = apiService.createCheckpoint(request)
+            Result.success(response.checkpoint)
         } catch (e: Exception) {
             Result.failure(e)
         }
