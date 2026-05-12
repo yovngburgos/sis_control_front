@@ -28,11 +28,13 @@ import com.siscontrol.mobile.presentation.theme.*
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun GuardiaRondaActivaScreen(
-    onFinishRound: () -> Unit,
+    viewModel: GuardFlowViewModel,
+    onFinishShift: () -> Unit,
     onReportIncident: () -> Unit,
     onPanic: () -> Unit,            // called after user confirms panic
     onScanCheckpoint: () -> Unit = {}  // navigates to CheckpointScreen
 ) {
+    val state by viewModel.uiState.collectAsState()
     // Persist across rotation
     var showPanicDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -274,6 +276,46 @@ fun GuardiaRondaActivaScreen(
                     isActive = true
                 )
                 Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            item {
+                when (state) {
+                    is GuardFlowUiState.Loading -> LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
+                    is GuardFlowUiState.Error -> Text(
+                        text = (state as GuardFlowUiState.Error).message,
+                        color = DangerColor,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        fontWeight = FontWeight.Medium
+                    )
+                    is GuardFlowUiState.Ready -> Text(
+                        text = (state as GuardFlowUiState.Ready).message.orEmpty(),
+                        color = SuccessColor,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        fontWeight = FontWeight.Medium
+                    )
+                    else -> Unit
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                onClick = { viewModel.finishRound() },
+                modifier = Modifier.weight(1f).height(48.dp)
+            ) {
+                Text("Finalizar ronda")
+            }
+            Button(
+                onClick = { viewModel.finishShift(onFinishShift) },
+                modifier = Modifier.weight(1f).height(48.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor)
+            ) {
+                Text("Finalizar jornada")
             }
         }
 

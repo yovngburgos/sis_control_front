@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -11,58 +12,113 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 
-/**
- * Gestor de Sesiones que utiliza Jetpack Preferences DataStore para persistencia segura.
- * 
- * Almacena el token JWT y el rol del usuario de forma asíncrona pero provee
- * acceso síncrono controlado para el interceptor de red.
- */
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "sis_control_session")
+
+data class AppSession(
+    val username: String?,
+    val userId: Long?,
+    val role: String?,
+    val installationId: Long?,
+    val shiftId: Long?,
+    val executionId: Long?,
+    val checkpointMap: Map<String, Long>
+)
 
 class SessionManager(private val context: Context) {
 
     companion object {
-        private val KEY_TOKEN = stringPreferencesKey("jwt_token")
+        private val KEY_USERNAME = stringPreferencesKey("username")
         private val KEY_ROLE = stringPreferencesKey("user_role")
+        private val KEY_USER_ID = longPreferencesKey("user_id")
+        private val KEY_INSTALLATION_ID = longPreferencesKey("installation_id")
+        private val KEY_SHIFT_ID = longPreferencesKey("shift_id")
+        private val KEY_EXECUTION_ID = longPreferencesKey("execution_id")
+        private val KEY_CHECKPOINT_MAP = stringPreferencesKey("checkpoint_map")
     }
 
-    /**
-     * Guarda los datos de la sesión.
-     */
-    suspend fun saveSession(token: String, role: String) {
+    suspend fun saveSession(username: String, role: String) {
         context.dataStore.edit { preferences ->
-            preferences[KEY_TOKEN] = token
-            preferences[KEY_ROLE] = role
+            preferences[KEY_USERNAME] = username
+            preferences[KEY_ROLE] = normalizeRole(role)
+            preferences.remove(KEY_USER_ID)
+            preferences.remove(KEY_INSTALLATION_ID)
+            preferences.remove(KEY_SHIFT_ID)
+            preferences.remove(KEY_EXECUTION_ID)
+            preferences.remove(KEY_CHECKPOINT_MAP)
         }
     }
 
-    /**
-     * Recupera el token como un Flow para observar cambios.
-     */
-    val tokenFlow: Flow<String?> = context.dataStore.data.map { preferences ->
-        preferences[KEY_TOKEN]
+    suspend fun saveGuardContext(userId: Long, installationId: Long) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_USER_ID] = userId
+            preferences[KEY_INSTALLATION_ID] = installationId
+        }
     }
 
-    /**
-     * Recupera el rol como un Flow.
-     */
-    val roleFlow: Flow<String?> = context.dataStore.data.map { preferences ->
-        preferences[KEY_ROLE]
+    suspend fun saveShiftId(shiftId: Long) {
+        context.dataStore.edit { it[KEY_SHIFT_ID] = shiftId }
     }
 
-    /**
-     * Recupera el token de forma síncrona bloqueante (usado mayormente por el interceptor).
-     */
-    fun getTokenSync(): String? = runBlocking {
-        context.dataStore.data.map { it[KEY_TOKEN] }.first()
+    suspend fun clearShiftId() {
+        context.dataStore.edit { it.remove(KEY_SHIFT_ID) }
     }
 
-    /**
-     * Limpia todos los datos de sesión (Logout).
-     */
+    suspend fun saveExecutionId(executionId: Long) {
+        context.dataStore.edit { it[KEY_EXECUTION_ID] = executionId }
+    }
+
+    suspend fun clearExecutionId() {
+        context.dataStore.edit { it.remove(KEY_EXECUTION_ID) }
+    }
+
+    suspend fun saveInstallationId(installationId: Long) {
+        context.dataStore.edit { it[KEY_INSTALLATION_ID] = installationId }
+    }
+
+    suspend fun saveCheckpointMap(map: Map<String, Long>) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_CHECKPOINT_MAP] = map.entries.joinToString("|") { (code, id) ->
+                "${code.uppercase()}:$id"
+            }
+        }
+    }
+
+    val tokenFlow: Flow<String?> = context.dataStore.data.map { null }
+    val roleFlow: Flow<String?> = context.dataStore.data.map { it[KEY_ROLE] }
+    val sessionFlow: Flow<AppSession> = context.dataStore.data.map { preferences ->
+        AppSession(
+            username = preferences[KEY_USERNAME],
+            userId = preferences[KEY_USER_ID],
+            role = preferences[KEY_ROLE],
+            installationId = preferences[KEY_INSTALLATION_ID],
+            shiftId = preferences[KEY_SHIFT_ID],
+            executionId = preferences[KEY_EXECUTION_ID],
+            checkpointMap = parseCheckpointMap(preferences[KEY_CHECKPOINT_MAP])
+        )
+    }
+
+    fun getTokenSync(): String? = null
+
+    fun getSessionSync(): AppSession = runBlocking { sessionFlow.first() }
+
     suspend fun clearSession() {
-        context.dataStore.edit { preferences ->
-            preferences.clear()
-        }
+        context.dataStore.edit { preferences -> preferences.clear() }
+    }
+
+    private fun normalizeRole(role: String): String = when (role.uppercase()) {
+        "GUARDIA" -> "GUARD"
+        else -> role.uppercase()
+    }
+
+    private fun parseCheckpointMap(raw: String?): Map<String, Long> {
+        if (raw.isNullOrBlank()) return emptyMap()
+        return raw.split("|")
+            .mapNotNull { entry ->
+                val parts = entry.split(":", limit = 2)
+                val id = parts.getOrNull(1)?.toLongOrNull()
+                val code = parts.getOrNull(0)?.uppercase()
+                if (!code.isNullOrBlank() && id != null) code to id else null
+            }
+            .toMap()
     }
 }
