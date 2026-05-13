@@ -1,5 +1,6 @@
 package com.siscontrol.mobile.di
 
+import com.siscontrol.mobile.domain.usecase.RegisterNfcScanUseCase
 import com.siscontrol.mobile.core.Config
 import com.siscontrol.mobile.data.remote.AuthApiService
 import com.siscontrol.mobile.data.remote.GuardFlowApiService
@@ -167,6 +168,10 @@ object AppModule {
     private val finishRoundUseCase    by lazy { FinishRoundUseCase(guardFlowRepository) }
     private val registerScanUseCase   by lazy { RegisterScanUseCase(guardFlowRepository) }
 
+    private val registerNfcScanUseCase by lazy {
+        RegisterNfcScanUseCase(guardFlowRepository)
+    }
+
     // -------------------------------------------------------------------------
     // ViewModel Factories
     // -------------------------------------------------------------------------
@@ -192,6 +197,7 @@ object AppModule {
             finishRoundUseCase = finishRoundUseCase,
             registerScanUseCase = registerScanUseCase,
             getInstallationsUseCase = getInstallationsUseCase,
-            getCheckpointsUseCase = getCheckpointsUseCase
+            getCheckpointsUseCase = getCheckpointsUseCase,
+            registerNfcScanUseCase = registerNfcScanUseCase,
         )
 }

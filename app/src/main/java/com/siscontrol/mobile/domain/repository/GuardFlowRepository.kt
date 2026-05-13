@@ -10,4 +10,6 @@ interface GuardFlowRepository {
     suspend fun startRound(userId: Long, installationId: Long): Result<RoundExecutionResponse>
     suspend fun finishRound(executionId: Long): Result<RoundExecutionResponse>
     suspend fun registerScan(executionId: Long, checkpointId: Long): Result<ScanResponse>
+
+    suspend fun registerNfcScan(executionId: Long, nfcTagCode: String): Result<ScanResponse>
 }

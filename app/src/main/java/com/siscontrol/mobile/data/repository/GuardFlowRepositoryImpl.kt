@@ -3,6 +3,7 @@ package com.siscontrol.mobile.data.repository
 import com.siscontrol.mobile.data.remote.ApiErrorParser
 import com.siscontrol.mobile.data.remote.GuardFlowApiService
 import com.siscontrol.mobile.data.remote.dto.EntityIdRefDto
+import com.siscontrol.mobile.data.remote.dto.NfcScanRequest
 import com.siscontrol.mobile.data.remote.dto.RegisterScanRequest
 import com.siscontrol.mobile.data.remote.dto.RoundExecutionResponse
 import com.siscontrol.mobile.data.remote.dto.ScanResponse
@@ -33,6 +34,19 @@ class GuardFlowRepositoryImpl(
                 RegisterScanRequest(
                     roundExecution = EntityIdRefDto(executionId),
                     checkpoint = EntityIdRefDto(checkpointId)
+                )
+            )
+        }
+
+    override suspend fun registerNfcScan(
+        executionId: Long,
+        nfcTagCode: String
+    ): Result<ScanResponse> =
+        execute {
+            apiService.registerNfcScan(
+                NfcScanRequest(
+                    executionId = executionId,
+                    nfcTagCode = nfcTagCode
                 )
             )
         }

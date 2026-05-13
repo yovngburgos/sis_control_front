@@ -1,5 +1,6 @@
 package com.siscontrol.mobile.data.remote
 
+import com.siscontrol.mobile.data.remote.dto.NfcScanRequest
 import com.siscontrol.mobile.data.remote.dto.RegisterScanRequest
 import com.siscontrol.mobile.data.remote.dto.RoundExecutionResponse
 import com.siscontrol.mobile.data.remote.dto.ScanResponse
@@ -32,4 +33,9 @@ interface GuardFlowApiService {
 
     @POST("/api/rondas/escaneo")
     suspend fun registerScan(@Body request: RegisterScanRequest): Response<ScanResponse>
+
+    @POST("/api/rondas/escaneo-nfc")
+    suspend fun registerNfcScan(
+        @Body request: NfcScanRequest
+    ) : Response<ScanResponse>
 }

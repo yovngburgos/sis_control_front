@@ -21,3 +21,8 @@ class FinishRoundUseCase(private val repository: GuardFlowRepository) {
 class RegisterScanUseCase(private val repository: GuardFlowRepository) {
     suspend operator fun invoke(executionId: Long, checkpointId: Long) = repository.registerScan(executionId, checkpointId)
 }
+
+class RegisterNfcScanUseCase(private val repository: GuardFlowRepository) {
+    suspend operator fun invoke(executionId: Long, nfcTagCode: String) =
+        repository.registerNfcScan(executionId, nfcTagCode)
+}

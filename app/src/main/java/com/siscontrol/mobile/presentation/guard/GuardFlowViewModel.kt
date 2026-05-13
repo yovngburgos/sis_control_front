@@ -11,6 +11,7 @@ import com.siscontrol.mobile.domain.usecase.GetInstallationsUseCase
 import com.siscontrol.mobile.domain.usecase.RegisterScanUseCase
 import com.siscontrol.mobile.domain.usecase.StartRoundUseCase
 import com.siscontrol.mobile.domain.usecase.StartShiftUseCase
+import com.siscontrol.mobile.domain.usecase.RegisterNfcScanUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -44,6 +45,7 @@ class GuardFlowViewModel(
     private val startRoundUseCase: StartRoundUseCase,
     private val finishRoundUseCase: FinishRoundUseCase,
     private val registerScanUseCase: RegisterScanUseCase,
+    private val registerNfcScanUseCase: RegisterNfcScanUseCase,
     private val getInstallationsUseCase: GetInstallationsUseCase,
     private val getCheckpointsUseCase: GetCheckpointsUseCase
 ) : ViewModel() {
@@ -139,6 +141,7 @@ class GuardFlowViewModel(
     fun registerNfcScan(nfcTagCode: String) {
         viewModelScope.launch {
             val code = nfcTagCode.trim().uppercase()
+
             if (code.isBlank()) {
                 _uiState.value = GuardFlowUiState.Error("No se leyó un código NFC válido.")
                 return@launch
@@ -146,35 +149,27 @@ class GuardFlowViewModel(
 
             val session = sessionManager.getSessionSync()
             val executionId = session.executionId
+
             if (executionId == null) {
-                _uiState.value = GuardFlowUiState.Error("No tienes una ronda activa. Inicia una ronda antes de escanear NFC.")
-                return@launch
-            }
-
-            var checkpointId = session.checkpointMap[code]
-            if (checkpointId == null && session.installationId != null) {
-                preloadCheckpoints(session.installationId).onFailure { error ->
-                    _uiState.value = GuardFlowUiState.Error(error.safeMessage())
-                    return@launch
-                }
-                checkpointId = sessionManager.getSessionSync().checkpointMap[code]
-            }
-
-            if (checkpointId == null) {
-                _uiState.value = GuardFlowUiState.Error("Checkpoint NFC no encontrado para esta instalación.")
+                _uiState.value = GuardFlowUiState.Error(
+                    "No tienes una ronda activa. Inicia una ronda antes de escanear NFC."
+                )
                 return@launch
             }
 
             _uiState.value = GuardFlowUiState.Loading
-            registerScanUseCase(executionId, checkpointId)
+
+            registerNfcScanUseCase(executionId, code)
                 .onSuccess { response ->
                     _uiState.value = GuardFlowUiState.ScanSuccess(
-                        message = response.message ?: "Escaneo registrado.",
+                        message = response.message ?: "Escaneo NFC registrado.",
                         checkpointName = response.scan.checkpoint?.name,
                         checklogId = response.scan.id
                     )
                 }
-                .onFailure { error -> _uiState.value = GuardFlowUiState.Error(error.safeMessage()) }
+                .onFailure { error ->
+                    _uiState.value = GuardFlowUiState.Error(error.safeMessage())
+                }
         }
     }
 
